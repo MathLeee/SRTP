@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2 class="mb-4">用户注册</h2>
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> 本平台使用RSA数字签名技术保障交易安全。注册后，您需要妥善保管私钥，用于后续交易签名验证。
+        </div>
+        
+        <form id="registerForm">
+            <div class="mb-3">
+                <label class="form-label">用户名</label>
+                <input type="text" class="form-control" name="username" required>
+                <div class="form-text">用户名至少4个字符，只能包含字母和数字。</div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">电子邮箱</label>
+                <input type="email" class="form-control" name="email" required>
+                <div class="form-text">请提供有效邮箱，用于找回密码和交易通知。</div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">密码</label>
+                <input type="password" class="form-control" name="password" required>
+                <div class="form-text">密码至少8个字符。</div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">确认密码</label>
+                <input type="password" class="form-control" name="password_confirm" required>
+            </div>
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">注册</button>
+                <a href="/login" class="btn btn-link">已有账号？立即登录</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 私钥保存模态框 -->
+<div class="modal fade" id="privateKeyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">重要：请保存您的私钥</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> <strong>警告：</strong> 此私钥用于交易签名，请务必安全保存！私钥丢失将无法恢复，也无法进行交易。
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">您的私钥：</label>
+                    <textarea id="privateKeyText" class="form-control" rows="10" readonly></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="downloadPrivateKey()">下载私钥文件</button>
+                <button type="button" class="btn btn-secondary" onclick="copyPrivateKey()">复制私钥</button>
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">我已安全保存私钥</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('registerForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    
+    // 表单验证
+    const username = this.querySelector('[name="username"]').value.trim();
+    const email = this.querySelector('[name="email"]').value.trim();
+    const password = this.querySelector('[name="password"]').value;
+    const passwordConfirm = this.querySelector('[name="password_confirm"]').value;
+    
+    if (username.length < 4 || !/^[a-zA-Z0-9]+$/.test(username)) {
+        alert('用户名至少需要4个字符，且只能包含字母和数字');
+        return;
+    }
+    
+    if (password.length < 8) {
+        alert('密码至少需要8个字符');
+        return;
+    }
+    
+    if (password !== passwordConfirm) {
+        alert('两次输入的密码不一致');
+        return;
+    }
+    
+    const formData = new FormData(this);
+    
+    fetch('/register', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // 显示私钥保存模态框
+            document.getElementById('privateKeyText').textContent = data.private_key;
+            const privateKeyModal = new bootstrap.Modal(document.getElementById('privateKeyModal'));
+            privateKeyModal.show();
+            
+            // 阻止用户关闭模态框
+            const modalElement = document.getElementById('privateKeyModal');
+            modalElement.addEventListener('hide.bs.modal', function (event) {
+                if (!confirm('您确定已经安全保存了私钥吗？未保存私钥将导致无法进行交易操作！')) {
+                    event.preventDefault();
+                }
+            });
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('注册过程中发生错误，请稍后重试。');
+    });
+});
+
+// 下载私钥文件
+function downloadPrivateKey() {
+    const privateKey = document.getElementById('privateKeyText').textContent;
+    const blob = new Blob([privateKey], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'private_key.pem';
+    link.click();
+}
+
+// 复制私钥到剪贴板
+function copyPrivateKey() {
+    const privateKeyText = document.getElementById('privateKeyText');
+    privateKeyText.select();
+    document.execCommand('copy');
+    alert('私钥已复制到剪贴板');
+}
+</script>
+{% endblock %}

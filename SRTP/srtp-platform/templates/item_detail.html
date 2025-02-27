@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                {% if item.image_path %}
+                <img src="{{ url_for('static', filename=item.image_path) }}" class="card-img-top" alt="{{ item.title }}">
+                {% else %}
+                <div class="bg-light text-center py-5">
+                    <i class="bi bi-image" style="font-size: 3rem;"></i>
+                    <p>无图片</p>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    <h2 class="card-title">{{ item.title }}</h2>
+                    <p class="card-text fs-4 text-danger">¥{{ item.price }}</p>
+                    <p class="card-text"><small class="text-muted">卖家: {{ item.seller_name }} | 发布时间: {{ item.created_at }}</small></p>
+                    <hr>
+                    <h5>商品描述</h5>
+                    <p class="card-text">{{ item.description }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-body">
+                    <h5 class="card-title">交易信息</h5>
+                    {% if session.get('user_id') %}
+                        {% if session.get('user_id') != item.seller_id %}
+                            <div id="purchase-section">
+                                <!-- 联系卖家按钮 -->
+                                <div class="d-grid mb-3">
+                                    <a href="{{ url_for('contact_seller', item_id=item.id) }}" class="btn btn-outline-primary">
+                                        <i class="bi bi-chat-dots"></i> 联系卖家
+                                    </a>
+                                </div>
+                                
+                                <p class="mb-3">购买此商品将使用RSA数字签名进行交易验证</p>
+                                
+                                <!-- 交易数据预览 -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">交易数据:</label>
+                                    <pre class="bg-light p-2 rounded" id="transaction-data">{
+  "item_id": {{ item.id }},
+  "price": {{ item.price }},
+  "buyer_id": {{ session.get('user_id') }},
+  "timestamp": "{% raw %}{{ getCurrentTimestamp() }}{% endraw %}"
+}</pre>
+                                </div>
+                                
+                                <!-- 签名过程 -->
+                                <div class="mb-3">
+                                    <label for="private-key" class="form-label">请输入您的私钥进行签名:</label>
+                                    <textarea class="form-control" id="private-key" rows="4" placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"></textarea>
+                                </div>
+                                
+                                <div class="d-grid gap-2">
+                                    <button id="sign-button" class="btn btn-primary">签名并购买</button>
+                                    <button id="buy-button" class="btn btn-success" style="display: none;">确认购买</button>
+                                </div>
+                                
+                                <div id="signature-display" class="mt-3" style="display: none;">
+                                    <label class="form-label fw-bold">生成的签名:</label>
+                                    <pre class="bg-light p-2 rounded" id="signature-value"></pre>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">这是您发布的商品</div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-warning">请先<a href="{{ url_for('login') }}">登录</a>后购买商品</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsencrypt@3.3.2/dist/jsencrypt.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 签名和购买流程
+    const signButton = document.getElementById('sign-button');
+    const buyButton = document.getElementById('buy-button');
+    const privateKeyInput = document.getElementById('private-key');
+    const signatureDisplay = document.getElementById('signature-display');
+    const signatureValue = document.getElementById('signature-value');
+    
+    if (signButton) {
+        signButton.addEventListener('click', function() {
+            const privateKey = privateKeyInput.value.trim();
+            if (!privateKey) {
+                alert('请输入您的私钥');
+                return;
+            }
+            
+            try {
+                // 获取当前时间戳并更新交易数据
+                const now = new Date().toISOString();
+                const transactionData = {
+                    item_id: {{ item.id }},
+                    price: {{ item.price }},
+                    buyer_id: {{ session.get('user_id', 0) }},
+                    timestamp: now
+                };
+                
+                document.getElementById('transaction-data').textContent = JSON.stringify(transactionData, null, 2);
+                
+                // 使用JSEncrypt进行签名
+                const encrypt = new JSEncrypt();
+                encrypt.setPrivateKey(privateKey);
+                const signature = encrypt.sign(JSON.stringify(transactionData), CryptoJS.SHA256, "sha256");
+                
+                if (signature) {
+                    signatureValue.textContent = signature;
+                    signatureDisplay.style.display = 'block';
+                    signButton.style.display = 'none';
+                    buyButton.style.display = 'block';
+                    
+                    // 存储签名和交易数据用于提交
+                    window.signatureData = {
+                        signature: signature,
+                        transaction_data: JSON.stringify(transactionData)
+                    };
+                } else {
+                    alert('签名失败，请检查私钥是否正确');
+                }
+            } catch (e) {
+                alert('签名过程出错: ' + e.message);
+                console.error(e);
+            }
+        });
+    }
+    
+    if (buyButton) {
+        buyButton.addEventListener('click', function() {
+            if (!window.signatureData) {
+                alert('请先生成签名');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('signature', window.signatureData.signature);
+            formData.append('transaction_data', window.signatureData.transaction_data);
+            
+            fetch('/buy/{{ item.id }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    window.location.href = '/my_transactions';
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('购买过程中发生错误');
+            });
+        });
+    }
+    
+    // 辅助函数用于获取当前时间戳
+    function getCurrentTimestamp() {
+        return new Date().toISOString();
+    }
+});
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+{% endblock %} 

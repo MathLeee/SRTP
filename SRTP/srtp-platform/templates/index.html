@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <!-- 首页横幅 -->
+    <div class="bg-light p-5 mb-5 rounded text-center">
+        <h1 class="display-4">校园二手交易平台</h1>
+        <p class="lead">
+            安全可靠的校园二手交易，使用RSA数字签名技术保障交易安全
+        </p>
+        <div class="mt-4">
+            {% if 'username' in session %}
+                <a href="{{ url_for('post_item') }}" class="btn btn-primary btn-lg">发布商品</a>
+                <a href="{{ url_for('browse_items') }}" class="btn btn-success btn-lg">浏览商品</a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">立即注册</a>
+                <a href="{{ url_for('login') }}" class="btn btn-success btn-lg">登录</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 平台特点 -->
+    <div class="row mb-5">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-shield-check text-primary" style="font-size: 3rem;"></i>
+                    <h3 class="card-title mt-3">RSA数字签名</h3>
+                    <p class="card-text">使用非对称加密技术，确保交易身份真实可靠，防止交易欺诈。</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-person-check text-primary" style="font-size: 3rem;"></i>
+                    <h3 class="card-title mt-3">校园专属</h3>
+                    <p class="card-text">面向校园师生，提供安全可靠的二手交易环境，满足校园用户特定需求。</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-currency-exchange text-primary" style="font-size: 3rem;"></i>
+                    <h3 class="card-title mt-3">便捷交易</h3>
+                    <p class="card-text">简化交易流程，提供透明的交易记录，保障买卖双方权益。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 最新商品 -->
+    <h2 class="mb-4">最新上架商品</h2>
+    {% if recent_items %}
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            {% for item in recent_items %}
+            <div class="col">
+                <div class="card h-100">
+                    {% if item.image_path %}
+                    <img src="{{ url_for('static', filename=item.image_path) }}" class="card-img-top" alt="{{ item.title }}" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-light text-center py-5">
+                        <i class="bi bi-image" style="font-size: 2rem;"></i>
+                        <p class="m-0">无图片</p>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ item.title }}</h5>
+                        <p class="card-text text-truncate">{{ item.description }}</p>
+                        <p class="card-text"><strong>¥{{ item.price }}</strong></p>
+                        <p class="card-text"><small class="text-muted">卖家: {{ item.seller_name }}</small></p>
+                    </div>
+                    <div class="card-footer bg-white border-top-0">
+                        <a href="{{ url_for('view_item', item_id=item.id) }}" class="btn btn-outline-primary">查看详情</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="text-center mt-4">
+            <a href="{{ url_for('browse_items') }}" class="btn btn-outline-primary">查看更多商品</a>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <p class="mb-0">目前还没有商品，成为第一个发布商品的用户吧！</p>
+        </div>
+    {% endif %}
+    
+    <!-- 使用说明 -->
+    <div class="mt-5 mb-5">
+        <h2 class="mb-4">如何使用</h2>
+        <div class="row">
+            <div class="col-md-3 text-center mb-4">
+                <div class="bg-light rounded-circle mx-auto d-flex justify-content-center align-items-center" style="width: 100px; height: 100px;">
+                    <i class="bi bi-person-plus" style="font-size: 2.5rem;"></i>
+                </div>
+                <h5 class="mt-3">1. 注册账号</h5>
+                <p>创建账号并安全保存私钥</p>
+            </div>
+            <div class="col-md-3 text-center mb-4">
+                <div class="bg-light rounded-circle mx-auto d-flex justify-content-center align-items-center" style="width: 100px; height: 100px;">
+                    <i class="bi bi-upload" style="font-size: 2.5rem;"></i>
+                </div>
+                <h5 class="mt-3">2. 发布商品</h5>
+                <p>填写商品信息并上传图片</p>
+            </div>
+            <div class="col-md-3 text-center mb-4">
+                <div class="bg-light rounded-circle mx-auto d-flex justify-content-center align-items-center" style="width: 100px; height: 100px;">
+                    <i class="bi bi-pen" style="font-size: 2.5rem;"></i>
+                </div>
+                <h5 class="mt-3">3. 签名交易</h5>
+                <p>使用私钥对交易数据签名</p>
+            </div>
+            <div class="col-md-3 text-center mb-4">
+                <div class="bg-light rounded-circle mx-auto d-flex justify-content-center align-items-center" style="width: 100px; height: 100px;">
+                    <i class="bi bi-check2-circle" style="font-size: 2.5rem;"></i>
+                </div>
+                <h5 class="mt-3">4. 完成交易</h5>
+                <p>卖家确认，交易完成</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

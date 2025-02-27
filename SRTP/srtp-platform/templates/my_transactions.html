@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">我的交易</h2>
+    
+    <ul class="nav nav-tabs mb-4" id="transactionTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="buying-tab" data-bs-toggle="tab" data-bs-target="#buying" type="button" role="tab">我的购买</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="selling-tab" data-bs-toggle="tab" data-bs-target="#selling" type="button" role="tab">我的出售</button>
+        </li>
+    </ul>
+    
+    <div class="tab-content" id="transactionTabsContent">
+        <!-- 我的购买 -->
+        <div class="tab-pane fade show active" id="buying" role="tabpanel">
+            {% if buying_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>商品</th>
+                                <th>卖家</th>
+                                <th>交易时间</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in buying_transactions %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('view_item', item_id=transaction.item_id) }}">{{ transaction.title }}</a>
+                                </td>
+                                <td>{{ transaction.seller_name }}</td>
+                                <td>{{ transaction.created_at }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if transaction.status == 'completed' %}bg-success
+                                        {% elif transaction.status == 'pending' %}bg-warning
+                                        {% elif transaction.status == 'cancelled' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                        {% if transaction.status == 'completed' %}已完成
+                                        {% elif transaction.status == 'pending' %}等待卖家确认
+                                        {% elif transaction.status == 'cancelled' %}已取消
+                                        {% else %}{{ transaction.status }}{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if transaction.status == 'pending' %}
+                                    <button class="btn btn-sm btn-outline-danger" onclick="cancelTransaction({{ transaction.id }})">取消交易</button>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="viewTransactionDetails({{ transaction.id }})">查看详情</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <p>您还没有购买记录</p>
+                    <a href="{{ url_for('browse_items') }}" class="btn btn-primary">浏览商品</a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- 我的出售 -->
+        <div class="tab-pane fade" id="selling" role="tabpanel">
+            {% if selling_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>商品</th>
+                                <th>买家</th>
+                                <th>交易时间</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in selling_transactions %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('view_item', item_id=transaction.item_id) }}">{{ transaction.title }}</a>
+                                </td>
+                                <td>{{ transaction.buyer_name }}</td>
+                                <td>{{ transaction.created_at }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if transaction.status == 'completed' %}bg-success
+                                        {% elif transaction.status == 'pending' %}bg-warning
+                                        {% elif transaction.status == 'cancelled' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                        {% if transaction.status == 'completed' %}已完成
+                                        {% elif transaction.status == 'pending' %}等待您确认
+                                        {% elif transaction.status == 'cancelled' %}已取消
+                                        {% else %}{{ transaction.status }}{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if transaction.status == 'pending' %}
+                                    <button class="btn btn-sm btn-success" onclick="confirmTransaction({{ transaction.id }})">确认交易</button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="cancelTransaction({{ transaction.id }})">取消交易</button>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="viewTransactionDetails({{ transaction.id }})">查看详情</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <p>您还没有出售记录</p>
+                    <a href="{{ url_for('post_item') }}" class="btn btn-primary">发布商品</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 交易详情模态框 -->
+    <div class="modal fade" id="transactionDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">交易详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="transactionDetailsContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 确认交易
+function confirmTransaction(transactionId) {
+    if (confirm('确认完成此交易？确认后状态将变为已完成。')) {
+        fetch(`/confirm_transaction/${transactionId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作过程中发生错误');
+        });
+    }
+}
+
+// 取消交易
+function cancelTransaction(transactionId) {
+    if (confirm('确定要取消此交易吗？')) {
+        fetch(`/cancel_transaction/${transactionId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作过程中发生错误');
+        });
+    }
+}
+
+// 查看交易详情
+function viewTransactionDetails(transactionId) {
+    const modal = new bootstrap.Modal(document.getElementById('transactionDetailsModal'));
+    modal.show();
+    
+    // 在实际应用中，这里应该从后端加载交易详情数据
+    // 这里为简化，仅显示交易ID
+    document.getElementById('transactionDetailsContent').innerHTML = `
+        <div class="alert alert-info">
+            正在加载交易 #${transactionId} 的详情...
+        </div>
+        <p>在实际应用中，这里将显示完整的交易信息，包括：</p>
+        <ul>
+            <li>交易数据</li>
+            <li>数字签名</li>
+            <li>验证结果</li>
+            <li>交易流程记录</li>
+        </ul>
+    `;
+}
+</script>
+{% endblock %} 

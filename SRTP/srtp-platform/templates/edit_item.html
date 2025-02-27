@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">编辑商品</h2>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="editItemForm" method="post" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="title" class="form-label">商品标题</label>
+                    <input type="text" class="form-control" id="title" name="title" value="{{ item.title }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="description" class="form-label">商品描述</label>
+                    <textarea class="form-control" id="description" name="description" rows="4" required>{{ item.description }}</textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="price" class="form-label">价格</label>
+                    <div class="input-group">
+                        <span class="input-group-text">¥</span>
+                        <input type="number" class="form-control" id="price" name="price" min="0" step="0.01" value="{{ item.price }}" required>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="contact_info" class="form-label">联系方式（仅买家可见）</label>
+                    <input type="text" class="form-control" id="contact_info" name="contact_info" value="{{ item.encrypted_contact }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="image" class="form-label">商品图片</label>
+                    {% if item.image_path %}
+                    <div class="mb-2">
+                        <p>当前图片：</p>
+                        <img src="{{ url_for('static', filename=item.image_path) }}" class="img-thumbnail" style="max-height: 200px;" alt="{{ item.title }}">
+                    </div>
+                    {% endif %}
+                    <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                    <div class="form-text">如果不上传新图片，将保留原图片</div>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('my_items') }}" class="btn btn-secondary">返回</a>
+                    <button type="submit" class="btn btn-primary">保存修改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('editItemForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('{{ url_for("edit_item", item_id=item.id) }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(data.message);
+            window.location.href = '{{ url_for("my_items") }}';
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('保存过程中发生错误');
+    });
+});
+</script>
+{% endblock %} 

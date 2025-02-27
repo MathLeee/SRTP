@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <title>校园二手交易平台</title>
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .content {
+            flex: 1;
+        }
+        footer {
+            margin-top: auto;
+            padding: 20px 0;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-shop"></i> 校园二手交易</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="bi bi-house"></i> 首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('browse_items') }}"><i class="bi bi-grid"></i> 浏览商品</a>
+                    </li>
+                    {% if 'username' in session %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('post_item') }}"><i class="bi bi-plus-circle"></i> 发布商品</a>
+                    </li>
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav">
+                    {% if 'username' in session %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> {{ session.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('my_items') }}"><i class="bi bi-bag"></i> 我的商品</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('manage_items') }}"><i class="bi bi-gear"></i> 批量管理商品</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('my_transactions') }}"><i class="bi bi-list-check"></i> 我的交易</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('my_messages') }}"><i class="bi bi-chat-left-text"></i> 我的消息 <span id="unreadBadge" class="badge bg-danger rounded-pill d-none">0</span></a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i> 退出登录</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}"><i class="bi bi-box-arrow-in-right"></i> 登录</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('register') }}"><i class="bi bi-person-plus"></i> 注册</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- 主内容 -->
+    <div class="content py-4">
+        {% block content %}{% endblock %}
+    </div>
+    
+    <!-- 页脚 -->
+    <footer class="text-center mt-5">
+        <div class="container">
+            <p class="mb-1">校园二手交易平台 &copy; {{ now.year }}</p>
+            <p class="text-muted mb-0">基于RSA数字签名技术的安全交易平台</p>
+        </div>
+    </footer>
+    
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
+    
+    {% if 'user_id' in session %}
+    <script>
+        // 检查未读消息数量
+        function checkUnreadMessages() {
+            fetch('{{ url_for("unread_message_count") }}')
+                .then(response => response.json())
+                .then(data => {
+                    const badge = document.getElementById('unreadBadge');
+                    if (data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.classList.remove('d-none');
+                    } else {
+                        badge.classList.add('d-none');
+                    }
+                })
+                .catch(error => console.error('Error checking messages:', error));
+        }
+        
+        // 页面加载时检查
+        document.addEventListener('DOMContentLoaded', function() {
+            checkUnreadMessages();
+            
+            // 每60秒检查一次
+            setInterval(checkUnreadMessages, 60000);
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

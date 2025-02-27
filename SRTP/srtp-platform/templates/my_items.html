@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">我的商品</h2>
+    
+    <div class="mb-4 d-flex justify-content-between">
+        <div>
+            <a href="{{ url_for('post_item') }}" class="btn btn-primary">发布新商品</a>
+            <a href="{{ url_for('manage_items') }}" class="btn btn-outline-secondary ms-2">批量管理</a>
+        </div>
+    </div>
+    
+    <div class="row">
+        {% if items %}
+            {% for item in items %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    {% if item.image_path %}
+                    <img src="{{ url_for('static', filename=item.image_path) }}" class="card-img-top" alt="{{ item.title }}" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-light text-center py-5">
+                        <i class="bi bi-image" style="font-size: 2rem;"></i>
+                        <p class="m-0">无图片</p>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ item.title }}</h5>
+                        <p class="card-text text-truncate">{{ item.description }}</p>
+                        <p class="card-text"><strong>¥{{ item.price }}</strong></p>
+                        <p class="card-text">
+                            <span class="badge 
+                                {% if item.status == 'available' %}bg-success
+                                {% elif item.status == 'pending' %}bg-warning
+                                {% elif item.status == 'sold' %}bg-danger
+                                {% elif item.status == 'unavailable' %}bg-secondary
+                                {% else %}bg-secondary{% endif %}">
+                                {% if item.status == 'available' %}可购买
+                                {% elif item.status == 'pending' %}交易中
+                                {% elif item.status == 'sold' %}已售出
+                                {% elif item.status == 'unavailable' %}已下架
+                                {% else %}{{ item.status }}{% endif %}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="card-footer bg-white border-top-0">
+                        <a href="{{ url_for('view_item', item_id=item.id) }}" class="btn btn-primary btn-sm">查看详情</a>
+                        
+                        <!-- 编辑按钮 -->
+                        {% if item.status == 'available' or item.status == 'unavailable' %}
+                        <a href="{{ url_for('edit_item', item_id=item.id) }}" class="btn btn-outline-primary btn-sm">编辑</a>
+                        {% endif %}
+                        
+                        <!-- 状态管理按钮 -->
+                        {% if item.status != 'pending' %}
+                        <div class="dropdown d-inline-block">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownStatus{{ item.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                管理
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="dropdownStatus{{ item.id }}">
+                                {% if item.status != 'available' %}
+                                <li><a class="dropdown-item" href="#" onclick="updateItemStatus({{ item.id }}, 'available')">上架商品</a></li>
+                                {% endif %}
+                                
+                                {% if item.status != 'unavailable' and item.status != 'sold' %}
+                                <li><a class="dropdown-item" href="#" onclick="updateItemStatus({{ item.id }}, 'unavailable')">下架商品</a></li>
+                                {% endif %}
+                                
+                                {% if item.status != 'sold' %}
+                                <li><a class="dropdown-item" href="#" onclick="updateItemStatus({{ item.id }}, 'sold')">标记为已售出</a></li>
+                                {% endif %}
+                                
+                                {% if item.status == 'available' %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteItem({{ item.id }})">删除商品</a></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 text-center py-5">
+                <p>您还没有发布任何商品</p>
+                <a href="{{ url_for('post_item') }}" class="btn btn-primary">立即发布</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function deleteItem(itemId) {
+    if (confirm('确定要删除此商品吗？此操作不可恢复。')) {
+        fetch(`/delete_item/${itemId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('删除过程中发生错误');
+        });
+    }
+}
+
+function updateItemStatus(itemId, status) {
+    const statusText = status === 'available' ? '上架' : 
+                      status === 'unavailable' ? '下架' : 
+                      status === 'sold' ? '标记为已售出' : '更改状态';
+    
+    if (confirm(`确定要将此商品${statusText}吗？`)) {
+        const formData = new FormData();
+        formData.append('status', status);
+        
+        fetch(`/update_item_status/${itemId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作过程中发生错误');
+        });
+    }
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2 class="mb-4">用户登录</h2>
+        
+        <form id="loginForm" method="post" action="{{ url_for('login') }}">
+            <div class="mb-3">
+                <label for="username" class="form-label">用户名</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">密码</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                <label class="form-check-label" for="remember">记住我（30天内自动登录）</label>
+            </div>
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">登录</button>
+                <a href="/register" class="btn btn-link">没有账号？立即注册</a>
+                <a href="/forgot_password" class="btn btn-link">忘记密码？</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitButton = this.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '登录中...';
+    
+    fetch('{{ url_for("login") }}', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'  // 确保发送和接收cookie
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(data.message);
+            window.location.href = '{{ url_for("index") }}';
+        } else {
+            alert(data.message);
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('登录过程中发生错误，请重试');
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
+    });
+});
+</script>
+{% endblock %}

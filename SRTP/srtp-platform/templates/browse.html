@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">浏览商品</h2>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <input type="text" id="search-input" class="form-control" placeholder="搜索商品...">
+                <button class="btn btn-outline-secondary" type="button" id="search-button">搜索</button>
+            </div>
+        </div>
+        <div class="col-md-6 text-end">
+            <div class="btn-group">
+                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    排序方式
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item sort-option" data-sort="newest">最新发布</a></li>
+                    <li><a class="dropdown-item sort-option" data-sort="price-low">价格从低到高</a></li>
+                    <li><a class="dropdown-item sort-option" data-sort="price-high">价格从高到低</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row" id="items-container">
+        {% if items %}
+            {% for item in items %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    {% if item.image_path %}
+                    <img src="{{ url_for('static', filename=item.image_path) }}" class="card-img-top" alt="{{ item.title }}" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-light text-center py-5">
+                        <i class="bi bi-image" style="font-size: 2rem;"></i>
+                        <p class="m-0">无图片</p>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ item.title }}</h5>
+                        <p class="card-text text-truncate">{{ item.description }}</p>
+                        <p class="card-text"><strong>¥{{ item.price }}</strong></p>
+                        <p class="card-text"><small class="text-muted">卖家: {{ item.seller_name }}</small></p>
+                    </div>
+                    <div class="card-footer bg-white border-top-0">
+                        <a href="{{ url_for('view_item', item_id=item.id) }}" class="btn btn-primary">查看详情</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 text-center py-5">
+                <p>暂无商品</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 搜索功能
+    document.getElementById('search-button').addEventListener('click', function() {
+        const searchText = document.getElementById('search-input').value.toLowerCase();
+        const items = document.querySelectorAll('#items-container .col-md-4');
+        
+        items.forEach(item => {
+            const title = item.querySelector('.card-title').textContent.toLowerCase();
+            const description = item.querySelector('.card-text').textContent.toLowerCase();
+            
+            if (title.includes(searchText) || description.includes(searchText)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+    
+    // 排序功能
+    document.querySelectorAll('.sort-option').forEach(option => {
+        option.addEventListener('click', function() {
+            const sortOption = this.getAttribute('data-sort');
+            const items = Array.from(document.querySelectorAll('#items-container .col-md-4'));
+            
+            items.sort((a, b) => {
+                if (sortOption === 'newest') {
+                    // 这里假设我们在后端排序，前端不做处理
+                    return 0;
+                } else if (sortOption === 'price-low') {
+                    const priceA = parseFloat(a.querySelector('strong').textContent.replace('¥', ''));
+                    const priceB = parseFloat(b.querySelector('strong').textContent.replace('¥', ''));
+                    return priceA - priceB;
+                } else if (sortOption === 'price-high') {
+                    const priceA = parseFloat(a.querySelector('strong').textContent.replace('¥', ''));
+                    const priceB = parseFloat(b.querySelector('strong').textContent.replace('¥', ''));
+                    return priceB - priceA;
+                }
+            });
+            
+            const container = document.getElementById('items-container');
+            items.forEach(item => container.appendChild(item));
+        });
+    });
+});
+</script>
+{% endblock %} 

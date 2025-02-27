@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <a href="{{ url_for('my_messages') }}" class="text-decoration-none me-2">
+                                <i class="bi bi-arrow-left"></i>
+                            </a>
+                            <span class="fw-bold">{{ chat_user.username }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body" id="chatMessages" style="height: 400px; overflow-y: auto;">
+                    {% if messages %}
+                        {% for message in messages %}
+                            {% if message.sender_id == session.user_id %}
+                                <div class="d-flex justify-content-end mb-3">
+                                    <div class="message-container">
+                                        {% if message.item_id and message.item_id in items %}
+                                            <div class="card mb-2 border-primary" style="max-width: 250px;">
+                                                <div class="card-body p-2">
+                                                    {% if items[message.item_id].image_path %}
+                                                    <img src="{{ url_for('static', filename=items[message.item_id].image_path) }}" 
+                                                         class="img-fluid mb-1" style="max-height: 100px; max-width: 100%; object-fit: cover;">
+                                                    {% endif %}
+                                                    <div>
+                                                        <a href="{{ url_for('view_item', item_id=message.item_id) }}" class="text-decoration-none">
+                                                            <h6 class="card-title mb-1">{{ items[message.item_id].title }}</h6>
+                                                        </a>
+                                                        <p class="card-text text-danger mb-0">¥{{ items[message.item_id].price }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        <div class="message sent p-2 rounded bg-primary text-white">
+                                            {{ message.content }}
+                                            <div class="text-end">
+                                                <small class="opacity-75" style="font-size: 0.7rem;">
+                                                    {{ message.created_at.split(' ')[1] }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="d-flex mb-3">
+                                    <div class="message-container">
+                                        {% if message.item_id and message.item_id in items %}
+                                            <div class="card mb-2 border-primary" style="max-width: 250px;">
+                                                <div class="card-body p-2">
+                                                    {% if items[message.item_id].image_path %}
+                                                    <img src="{{ url_for('static', filename=items[message.item_id].image_path) }}" 
+                                                         class="img-fluid mb-1" style="max-height: 100px; max-width: 100%; object-fit: cover;">
+                                                    {% endif %}
+                                                    <div>
+                                                        <a href="{{ url_for('view_item', item_id=message.item_id) }}" class="text-decoration-none">
+                                                            <h6 class="card-title mb-1">{{ items[message.item_id].title }}</h6>
+                                                        </a>
+                                                        <p class="card-text text-danger mb-0">¥{{ items[message.item_id].price }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        <div class="message received p-2 rounded bg-light">
+                                            {{ message.content }}
+                                            <div class="text-end">
+                                                <small class="text-muted" style="font-size: 0.7rem;">
+                                                    {{ message.created_at.split(' ')[1] }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-chat-dots" style="font-size: 2rem;"></i>
+                            <p class="mt-2">没有消息记录，开始聊天吧</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-footer bg-light">
+                    <form id="messageForm" method="post">
+                        <div class="mb-2">
+                            {% if my_items %}
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-tag"></i> 选择商品
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="selectItem(null)">不选择商品</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    {% for item in my_items %}
+                                    <li><a class="dropdown-item" href="#" onclick="selectItem({{ item.id }}, '{{ item.title }}')">{{ item.title }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div id="selectedItemContainer" class="d-none mt-2 mb-2 p-2 border rounded bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span id="selectedItemTitle" class="text-primary"></span>
+                                    <button type="button" class="btn btn-sm btn-link p-0" onclick="clearSelectedItem()">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="input-group">
+                            <input type="hidden" id="item_id" name="item_id" value="{{ request.args.get('item_id', '') }}">
+                            <input type="text" id="message" name="message" class="form-control" placeholder="输入消息..." autocomplete="off" required>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send"></i> 发送
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 页面加载完成后滚动到底部
+document.addEventListener('DOMContentLoaded', function() {
+    scrollToBottom();
+    
+    // 如果URL中包含商品ID参数，显示商品信息
+    const urlParams = new URLSearchParams(window.location.search);
+    const itemId = urlParams.get('item_id');
+    if (itemId) {
+        document.getElementById('item_id').value = itemId;
+    }
+});
+
+function scrollToBottom() {
+    const chatContainer = document.getElementById('chatMessages');
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// 表单提交时使用AJAX发送消息
+document.getElementById('messageForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('{{ url_for("chat", user_id=chat_user.id) }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // 重新加载页面以显示新消息
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('发送消息失败');
+    });
+});
+
+// 选择商品
+function selectItem(itemId, itemTitle) {
+    document.getElementById('item_id').value = itemId || '';
+    
+    if (itemId) {
+        document.getElementById('selectedItemTitle').textContent = itemTitle;
+        document.getElementById('selectedItemContainer').classList.remove('d-none');
+    } else {
+        document.getElementById('selectedItemContainer').classList.add('d-none');
+    }
+}
+
+// 清除选择的商品
+function clearSelectedItem() {
+    document.getElementById('item_id').value = '';
+    document.getElementById('selectedItemContainer').classList.add('d-none');
+}
+</script>
+
+<style>
+.message {
+    max-width: 70%;
+    word-wrap: break-word;
+}
+.message-container {
+    max-width: 80%;
+}
+.sent {
+    border-radius: 15px 15px 0 15px !important;
+}
+.received {
+    border-radius: 15px 15px 15px 0 !important;
+}
+</style>
+{% endblock %} 
